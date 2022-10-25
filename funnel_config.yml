@@ -1,0 +1,41 @@
+Database: boltdb
+Compute: slurm
+
+Compute: slurm
+
+Server:
+  # Hostname of the Funnel server.
+  HostName: login
+
+Worker:
+  WorkDir: /nfs/home/slurmer/funnel-work-dir
+BoltDB:
+  # Path to the database file
+  Path: /nfs/home/slurmer/funnel-work-dir/funnel.db
+
+Slurm:
+  # Turn off task state reconciler. When enabled, Funnel communicates with the HPC
+  # scheduler to find tasks that are stuck in a queued state or errored and
+  # updates the task state accordingly.
+  DisableReconciler: true
+  # ReconcileRate is how often the compute backend compares states in Funnel's backend
+  # to those reported by the backend
+  ReconcileRate: 10m
+  TemplateFile: ""
+  Template: |
+    #!/bin/bash
+    #SBATCH --job-name {{.TaskId}}
+    #SBATCH --ntasks 1
+    #SBATCH --error {{.WorkDir}}/funnel-stderr
+    #SBATCH --output {{.WorkDir}}/funnel-stdout
+    {{if ne .Cpus 0 -}}
+    {{printf "#SBATCH --cpus-per-task %d" .Cpus}}
+    {{- end}}
+    {{if ne .RamGb 0.0 -}}
+    {{printf "#SBATCH --mem %.0fGB" .RamGb}}
+    {{- end}}
+    {{if ne .DiskGb 0.0 -}}
+    {{printf "#SBATCH --tmp %.0fGB" .DiskGb}}
+    {{- end}}
+    /nfs/home/slurmer/bin/funnel worker run --config /nfs/home/slurmer/etc/funnel_config.yml --taskID {{.TaskId}}
+
